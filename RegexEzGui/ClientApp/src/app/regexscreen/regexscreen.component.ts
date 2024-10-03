@@ -6,7 +6,7 @@ import { RegexService } from './regex.service';  // Adjust the path as necessary
   templateUrl: './regexscreen.component.html',
   styleUrls: ['./regexscreen.component.css']
 })
-export class RegexscreenComponent {
+export class RegexScreenComponent {
   regexPattern: string =`// This is a comment
 test: ^$(username)@$(domain)\\.$(tld)$
 username: $name
@@ -55,7 +55,7 @@ $field.tld: fraser@yahoo.com $= com`;
       inputString: this.testString,
     };
 
-    this.regexService.CheckForMatch(request).subscribe(
+    this.regexService.checkForMatch(request).subscribe(
       (response) => {
         this.matchResult = response
           ? `This Pattern Matches`
@@ -75,7 +75,7 @@ $field.tld: fraser@yahoo.com $= com`;
       field: this.domainString, // Hardcoded domain field extraction
     };
 
-    this.regexService.GetFieldValue(request).subscribe(
+    this.regexService.getFieldValue(request).subscribe(
       (response: any) => {
         try {
           // Try to parse the response as JSON
@@ -104,7 +104,7 @@ $field.tld: fraser@yahoo.com $= com`;
       field: this.domainString,
     };
 
-    this.regexService.RunUnitTest(request).subscribe(
+    this.regexService.runUnitTest(request).subscribe(
       (response) => {
         this.testResults = response.testPassed
           ? 'All unit tests passed successfully!'

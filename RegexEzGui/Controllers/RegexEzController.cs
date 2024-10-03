@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using RegexEzLib.RegexEz;
+using RegexEzLib;
 
 namespace RegexExGui.Controllers
 {

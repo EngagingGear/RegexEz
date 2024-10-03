@@ -1,7 +1,7 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
 
-namespace RegexEzLib.RegexEz;
+namespace RegexEzLib;
 
 public class RegexEz
 {
