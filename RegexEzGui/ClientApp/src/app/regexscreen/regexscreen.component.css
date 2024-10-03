@@ -1,0 +1,133 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.container {
+  width: 900px;
+  background-color: #fff;
+  padding: 30px;
+  border-radius: 15px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  margin: auto;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+  .header h2 {
+    color: #333;
+    font-weight: bold;
+    font-size: 2rem;
+    background: linear-gradient(to right, #ff416c, #ff4b2b);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+.pattern-section {
+  margin-bottom: 25px;
+}
+
+  .pattern-section
+  label{
+      margin-bottom:8px;
+  }
+  textarea {
+    width: 100%;
+    padding: 15px;
+    background-color: #ffffff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    color: #495057;
+    font-size: 1rem;
+    resize: none;
+  }
+
+.string-test {
+  margin-bottom: 20px;
+}
+
+  .string-test label {
+    display: block;
+    font-size: 1rem;
+    color: #495057;
+    margin-bottom: 8px;
+  }
+
+  .string-test input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #ffffff;
+    color: #333;
+    font-size: 1rem;
+  }
+
+.buttons {
+  display: flex;
+  justify-content: space-between;
+}
+
+  .buttons button {
+    padding: 6px 30px;
+    border: 1px solid #007bff;
+    background-color: #007bff;
+    color: white;
+    border-radius: 8px;
+    height: 50px;
+    font-size: 0.85rem;
+    font-weight:500;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    width: 170px;
+  }
+
+    .buttons button:hover {
+      background-color: #0056b3;
+    }
+
+.match-output .domain-result {
+  padding: 12px;
+  background-color: white;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  font-size: 1rem;
+  color: #495057;
+  height: 50px;
+}
+
+.test-results textarea {
+  width: 100%;
+  padding: 12px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  color: #495057;
+  font-size: 1rem;
+  resize: none;
+}
+
+.match-output {
+  width: 80%;
+  padding-left: 20px;
+  margin-top: 12px;
+ 
+}
+.test-result {
+  padding:15px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  font-size: 1rem;
+}
+.match-output-testResult {
+  width: 80%;
+  padding-left: 20px;
+}
