@@ -7,7 +7,7 @@ import { RegexService } from './regex.service';  // Adjust the path as necessary
   styleUrls: ['./regexscreen.component.css']
 })
 export class RegexScreenComponent {
-  regexPattern: string =`// This is a comment
+  regexPattern = `// This is a comment
 test: ^$(username)@$(domain)\\.$(tld)$
 username: $name
 domain: $name
@@ -21,77 +21,98 @@ $noMatch: fraser-orr@yahoo.com
 $field.username: fraser@yahoo.com $= fraser
 $field.domain: fraser@yahoo.com $= yahoo
 $field.tld: fraser@yahoo.com $= com`;
-  testString: string = '';
-  matchResult: any = '';
-  domainString: any = '';
-  testResults: any = '';
-  domainResult: any = '';
-  stringTestPattern =
-    {
-      Pattern: this.regexPattern,
-      InputString: this.testString,
-      Field: this.domainString,
-
-    }
+  testString = "fraserorr@yahoo.com";
+  testResults = "";
+  fieldName = "";
+  matchNum = "";
+  errorMessage = "";
+  matchStyle = "";
 
   constructor(private regexService: RegexService) { }
 
-  // Method to generate regex pattern via backend
-  //generateRegexPattern() {
-  //  this.regexService.generateRegexPattern(this.stringTestPattern).subscribe(
-  //    (response) => {
-  //      this.regexPattern = response.regexPattern || 'Pattern not generated.';
-  //    },
-  //    (error) => {
-  //      console.error('Error generating regex pattern:', error);
-  //    }
-  //  );
-  //}
-
-  // Method to check for match via backend
   checkMatch() {
     const request = {
       pattern: this.regexPattern.replace(/\n/g, '\r\n'),
       inputString: this.testString,
     };
-
+    this.clear();
     this.regexService.checkForMatch(request).subscribe(
       (response) => {
-        this.matchResult = response
-          ? `This Pattern Matches`
-          : 'This Pattern Not Match.';
+        if (!this.isError(response)) {
+          if (response.value) {
+            this.testResults = "Match found:\r\n" + response.value;
+          } else {
+            this.testResults = "No match found";
+          }
+        }
       },
       (error) => {
-        console.error('Error testing string:', error);
+        this.handleError(error);
       }
     );
   }
 
-  // Method to extract domain value via backend
-  getFieldValue() {
+  checkMultiMatches() {
     const request = {
       pattern: this.regexPattern.replace(/\n/g, '\r\n'),
       inputString: this.testString,
-      field: this.domainString, // Hardcoded domain field extraction
     };
-
-    this.regexService.getFieldValue(request).subscribe(
-      (response: any) => {
-        try {
-          // Try to parse the response as JSON
-
-
-          // If successfully parsed, store the parsed JSON object
-          this.domainResult = response.fieldValue;
-        } catch (error) {
-          // If parsing fails, store the response as a string
-          this.domainResult = response || 'No domain found.';
+    this.clear();
+    this.regexService.checkForMultiMatch(request).subscribe(
+      (response) => {
+        if (!this.isError(response)) {
+          if (response.multiValues) {
+            debugger;
+            this.testResults = "Match found:\r\n";
+            for (let m of response.multiValues)
+              this.testResults += m + "\r\n";
+          } else {
+            this.testResults = "No matches found";
+          }
         }
-
-        console.log(this.domainResult); // This will print the final result
       },
       (error) => {
-        console.error('Error occurred:', error);
+        this.handleError(error);
+      }
+    );
+  }
+    getFieldValue() {
+    const request = {
+      pattern: this.regexPattern.replace(/\n/g, '\r\n'),
+      inputString: this.testString,
+      field: this.fieldName
+    };
+
+    this.clear();
+    this.regexService.getFieldValue(request).subscribe(
+      (response: any) => {
+          if (!this.isError(response)) {
+            this.testResults = `Field: ${this.fieldName}\r\nValue: ${response.fieldValue}`;
+          }
+      },
+      (error) => {
+        this.handleError(error);
+      }
+    );
+  }
+
+  getFieldValueMultiMatch() {
+    const request = {
+      pattern: this.regexPattern.replace(/\n/g, '\r\n'),
+      inputString: this.testString,
+      field: this.fieldName,
+      matchNum: Number(this.matchNum)
+  };
+
+    this.clear();
+    this.regexService.getFieldMultiMatch(request).subscribe(
+      (response: any) => {
+        if (!this.isError(response)) {
+          this.testResults = `Field: ${this.fieldName}\r\nMatchNum: ${this.matchNum}\r\nValue: ${response.fieldValue}`;
+        }
+      },
+      (error) => {
+        this.handleError(error);
       }
     );
   }
@@ -101,18 +122,39 @@ $field.tld: fraser@yahoo.com $= com`;
     const request = {
       pattern: this.regexPattern.replace(/\n/g, '\r\n'),
       inputString: this.testString,
-      field: this.domainString,
+      field: this.fieldName,
     };
 
+    this.clear();
     this.regexService.runUnitTest(request).subscribe(
       (response) => {
-        this.testResults = response.testPassed
-          ? 'All unit tests passed successfully!'
-          : `Test failures: ${response.failures.join(', ')}`;
+        if (!this.isError(response)) {
+          this.testResults = response.testPassed
+            ? 'All unit tests passed successfully!'
+            : `Test failures: ${response.failures.join(', ')}`;
+        }
       },
       (error) => {
-        console.error('Error running unit tests:', error);
+        this.handleError(error);
       }
     );
+  }
+
+  clear() {
+    this.testResults = "";
+    this.errorMessage = "";
+  }
+
+  private isError(response: any): boolean {
+    if (response.errorMessage) {
+      this.handleError(response);
+      return true;
+    }
+    return false;
+  }
+
+  private handleError(error: any) {
+    this.clear();
+    this.errorMessage = error.message ?? error.errorMessage ?? "Error";
   }
 }

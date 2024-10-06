@@ -9,7 +9,7 @@ public class RegexEz
     private record ListNode(string? Macro = null, string? Text = null);
 
     private const string TestMatch = "$match";
-    private const string TestMatchMulti = "$match-multi";
+    private const string TestMatchMulti = "$multimatch";
     private const string TestNoMatch = "$nomatch";
     private const string TestEnd = "$end";
     private const string TestFieldPrefix = "$field.";
@@ -35,27 +35,10 @@ public class RegexEz
         Initialize(pattern);
     }
 
-    public string RegexStr()
-    {
-        return Build(_macros.First().Key);
-    }
-
     public Regex Regex()
     {
         _regex ??= new Regex(RegexStr());
         return _regex;
-    }
-
-    public bool Match(string test)
-    {
-        return Regex().IsMatch(test);
-    }
-
-    public string GetField(string test, string fieldName)
-    {
-        var groups = Regex().Match(test).Groups;
-        var groupName = $"{TagPrefix}{fieldName}";
-        return groups.ContainsKey(groupName) ? groups[groupName].Value : string.Empty;
     }
 
     public Regex Regex(RegexOptions options)
@@ -67,6 +50,46 @@ public class RegexEz
     {
         return new Regex(RegexStr(), options, timeout);
     }
+
+    public string RegexStr()
+    {
+        return Build(_macros.First().Key);
+    }
+
+    public bool IsMatch(string test)
+    {
+        return Regex().IsMatch(test);
+    }
+
+    public Match Match(string test)
+    {
+        return Regex().Match(test);
+    }
+
+    public MatchCollection Matches(string test)
+    {
+        return Regex().Matches(test);
+    }
+
+    public string GetField(string test, string fieldName)
+    {
+        var groups = Regex().Match(test).Groups;
+        var groupName = $"{TagPrefix}{fieldName}";
+        return groups.ContainsKey(groupName) ? groups[groupName].Value : string.Empty;
+    }
+
+    public string? GetFieldMultiMatch(string test, string fieldName, int matchNum)
+    {
+        var matches = Regex().Matches(test);
+        if (matches.Count <= matchNum)
+        {
+            return null;
+        }
+        var groups = matches[matchNum].Groups;
+        var groupName = $"{TagPrefix}{fieldName}";
+        return groups.ContainsKey(groupName) ? groups[groupName].Value : string.Empty;
+    }
+
 
     public bool Test(List<string>? optionalFailures = null)
     {
@@ -135,86 +158,28 @@ public class RegexEz
             }
         }
 
-        return allPass;
-    }
-
-    private void Initialize(string[] pattern)
-    {
-        _macros.Clear();
-        for (var lineNum = 0; lineNum < pattern.Length; lineNum++)
+        foreach (var (testStr, matches) in _multiMatches)
         {
-            var line = pattern[lineNum];
-            if (line.Trim().StartsWith("//") || string.IsNullOrWhiteSpace(line))
+            var match = regex.Matches(testStr);
+            if (match.Count != matches.Count)
             {
-                continue;
-            }
-
-            var colonIdx = line.IndexOf(':');
-
-            if (colonIdx == -1)
-            {
-                throw new ArgumentException("Invalid pattern");
-            }
-
-            var name = line.Substring(0, colonIdx);
-            if (_macros.ContainsKey(name))
-            {
-                throw new ArgumentException($"Macro {name} defined twice");
-            }
-
-            while (char.IsWhiteSpace(line[colonIdx + 1]))
-            {
-                colonIdx++;
-            }
-            var regex = line.Substring(colonIdx + 1);
-            if (name.ToLower() == TestMatch)
-                AddTest(regex, true);
-            // ReSharper disable once StringLiteralTypo
-            else if (name.ToLower() == TestNoMatch)
-                AddTest(regex, false);
-            else if (name.ToLower() == TestMatchMulti)
-            {
-                var list = new List<string>();
-                var endFound = false;
-                for (; lineNum < pattern.Length; lineNum++)
-                {
-                    var multiMatchLine = pattern[lineNum];
-                    if (multiMatchLine.ToLower() == TestEnd)
-                    {
-                        endFound = true;
-                        break;
-                    }
-
-                    list.Add(multiMatchLine);
-                }
-                if (!endFound)
-                    throw new ArgumentException($"Missing {TestEnd}");
-                AddMultiMatch(regex, list);
-            }
-            else if (name.StartsWith(TestFieldPrefix))
-            {
-                var fieldName = name.Substring(TestFieldPrefix.Length);
-                var split = regex.Split("$=");
-
-                if (split.Length != 2 || string.IsNullOrWhiteSpace(fieldName))
-                {
-                    throw new ArgumentException($"Invalid field test {line}");
-                }
-
-                AddFieldTest(split[0].Trim(), fieldName, split[1].Trim());
-            }
-            else if (name.StartsWith("$"))
-            {
-                throw new ArgumentException($"Invalid macro name {name}");
+                allPass = false;
+                optionalFailures?.Add($"Expected {matches.Count} matches but got {match.Count}");
             }
             else
             {
-                var nodes = Parse(regex);
-                _macros.Add(name, nodes);
+                for (var i = 0; i < match.Count; i++)
+                {
+                    if (match[i].Value != matches[i])
+                    {
+                        allPass = false;
+                        optionalFailures?.Add($"Expected {matches[i]} but got {match[i].Value}");
+                    }
+                }
             }
         }
 
-        Build(_macros.First().Key);
+        return allPass;
     }
 
     private void AddTest(string testString, bool expectedPass)
@@ -241,6 +206,88 @@ public class RegexEz
             _fieldTests[testString].Add(new FieldTest(fieldName, expectedValue));
     }
 
+    private void Initialize(string[] pattern)
+    {
+        _macros.Clear();
+        for (var lineNum = 0; lineNum < pattern.Length; lineNum++)
+        {
+            var line = pattern[lineNum];
+            if (line.Trim().StartsWith("//") || string.IsNullOrWhiteSpace(line))
+            {
+                continue;
+            }
+
+            var colonIdx = line.IndexOf(':');
+
+            if (colonIdx == -1)
+            {
+                throw new ArgumentException($"Invalid pattern line {lineNum}, expected :");
+            }
+
+            var name = line.Substring(0, colonIdx);
+            if (_macros.ContainsKey(name))
+            {
+                throw new ArgumentException($"Invalid pattern line {lineNum}, macro {name} defined twice");
+            }
+
+            while (char.IsWhiteSpace(line[colonIdx + 1]))
+            {
+                colonIdx++;
+            }
+            var regex = line.Substring(colonIdx + 1);
+            if (name.ToLower() == TestMatch)
+                AddTest(regex, true);
+            else if (name.ToLower() == TestNoMatch)
+                AddTest(regex, false);
+            else if (name.ToLower() == TestMatchMulti)
+            {
+                var list = new List<string>();
+                var endFound = false;
+                for (lineNum++; lineNum < pattern.Length; lineNum++)
+                {
+                    var multiMatchLine = pattern[lineNum];
+                    if (multiMatchLine.ToLower() == TestEnd)
+                    {
+                        endFound = true;
+                        break;
+                    }
+
+                    list.Add(multiMatchLine);
+                }
+                if (!endFound)
+                    throw new ArgumentException($"Invalid test line {lineNum}, missing {TestEnd}");
+                AddMultiMatch(regex, list);
+            }
+            else if (name.StartsWith(TestFieldPrefix))
+            {
+                var fieldName = name.Substring(TestFieldPrefix.Length);
+                if (string.IsNullOrWhiteSpace(fieldName))
+                {
+                    throw new ArgumentException($"Invalid field test {line}, expected field name after .");
+                }
+                var split = regex.Split("$=");
+
+                if (split.Length != 2 || string.IsNullOrWhiteSpace(fieldName))
+                {
+                    throw new ArgumentException($"Invalid field test {line}, expected $=");
+                }
+
+                AddFieldTest(split[0].Trim(), fieldName, split[1].Trim());
+            }
+            else if (name.StartsWith("$"))
+            {
+                throw new ArgumentException($"Invalid definition line {lineNum}");
+            }
+            else
+            {
+                var nodes = Parse(regex);
+                _macros.Add(name, nodes);
+            }
+        }
+
+        Build(_macros.First().Key);
+    }
+
     private string Build(string name, HashSet<string>? alreadyUsed = null)
     {
         if (alreadyUsed == null)
@@ -251,6 +298,7 @@ public class RegexEz
         {
             alreadyUsed.Add(name);
         }
+
         var sb = new StringBuilder();
         foreach (var node in _macros[name])
         {
@@ -277,7 +325,7 @@ public class RegexEz
         return sb.ToString();
     }
 
-    enum Mode
+    private enum Mode
     {
         Text,
         MacroStart,

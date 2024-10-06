@@ -21,11 +21,19 @@ export class RegexService {
     return this.http.post(`https://localhost:44484/RegexEz/CheckForMatch`, request);
   }
 
+  checkForMultiMatch(request: IStringTestRequest): Observable<any> {
+    return this.http.post(`https://localhost:44484/RegexEz/CheckForMultiMatch`, request);
+  }
+
   // Call to test a string against a regex pattern
   getFieldValue(request: any, options?: any) {
     return this.http.post('https://localhost:44484/RegexEz/GetFieldValue', request);
   }
   
+  // Call to test a string against a regex pattern
+  getFieldMultiMatch(request: any, options?: any) {
+    return this.http.post('https://localhost:44484/RegexEz/GetFieldMultiMatch', request);
+  }
   // Call to run unit tests
   runUnitTest(request: IStringTestRequest): Observable<any> {
     return this.http.post(`${this.baseUrl}RegexEz/RunUnitTest`, request);

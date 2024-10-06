@@ -7,22 +7,6 @@ namespace RegexExGui.Controllers
     [Route("[controller]")]
     public class RegexEzController : ControllerBase
     {
-//        string pattern = @"// This is a comment
-//test: ^$(username)@$(domain)\.$(tld)$
-//username: $name
-//domain: $name
-//tld: $name
-//name: [a-zA-Z0-9_]+
-
-//$match: fraser@yahoo.com
-//$match: fraser_orr@yahoo.com
-//$noMatch: fraser@yahoo
-//$noMatch: fraser-orr@yahoo.com
-//$field.username: fraser@yahoo.com $= fraser
-//$field.domain: fraser@yahoo.com $= yahoo
-//$field.tld: fraser@yahoo.com $= com
-//";
-
         [HttpPost("CheckForMatch")]
         public IActionResult CheckForMatch([FromBody] StringTestRequest request)
         {
@@ -30,13 +14,30 @@ namespace RegexExGui.Controllers
             {
                 var regexEz = new RegexEz(request.Pattern, true);
 
-                bool match = regexEz.Match(request.InputString);
+                var match = regexEz.Match(request.InputString);
 
-                return Ok(match);
+                return Ok(new { value = match.Value });
             }
             catch (Exception ex)
             {
-                return BadRequest($"Error during regex testing: {ex.Message}");
+                return Ok(new { errorMessage = ex.Message });
+            }
+        }
+
+        [HttpPost("checkForMultiMatch")]
+        public IActionResult checkForMultiMatch([FromBody] StringTestRequest request)
+        {
+            try
+            {
+                var regexEz = new RegexEz(request.Pattern, true);
+
+                var match = regexEz.Matches(request.InputString);
+
+                return Ok(new { multiValues = match.Select(m => m.Value) });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { errorMessage = ex.Message });
             }
         }
 
@@ -46,18 +47,34 @@ namespace RegexExGui.Controllers
             try
             {
                 var regexEz = new RegexEz(request.Pattern, true);
-
-
-                bool match = regexEz.Match(request.InputString);
-                string fieldValue = request.Field != null ? regexEz.GetField(request.InputString, request.Field) : null;
+                string fieldValue = regexEz.GetField(request.InputString, request.Field);
 
                 return Ok(new { FieldValue = fieldValue });
             }
             catch (Exception ex)
             {
-                return BadRequest($"Error during regex testing: {ex.Message}");
+                return Ok(new { errorMessage = ex.Message });
             }
         }
+
+        [HttpPost("GetFieldMultiMatch")]
+        public IActionResult GetFieldMultiMatch([FromBody] StringTestRequest request)
+        {
+            try
+            {
+                var regexEz = new RegexEz(request.Pattern, true);
+
+
+                var fieldValue = regexEz.GetFieldMultiMatch(request.InputString, request.Field, request.MatchNum ?? -1);
+
+                return Ok(new { FieldValue = fieldValue });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { errorMessage = ex.Message });
+            }
+        }
+
         [HttpPost("RunUnitTest")]
         public IActionResult RunUnitTest([FromBody] StringTestRequest request)
         {
@@ -65,12 +82,8 @@ namespace RegexExGui.Controllers
             {
 
                 var regexEz = new RegexEz(request.Pattern, true);
-
-
-              
                 List<string> failures = new();
                 bool passed = regexEz.Test(failures);
-
                
                 return Ok(new
                 {
@@ -80,9 +93,7 @@ namespace RegexExGui.Controllers
             }
             catch (Exception ex)
             {
-                // Log the exception for debugging
-                Console.WriteLine($"Error during regex test run: {ex.Message}");
-                return BadRequest($"Error during regex test run: {ex.Message}");
+                return Ok(new { errorMessage = ex.Message });
             }
         }
 
@@ -93,9 +104,10 @@ namespace RegexExGui.Controllers
 
     public class StringTestRequest
     {
-        public string? Pattern { get; set; }
-        public string? InputString { get; set; }
-        public string? Field { get; set; }
+        public string Pattern { get; set; } = string.Empty;
+        public string InputString { get; set; } = string.Empty;
+        public string Field { get; set; } = string.Empty;
+        public int? MatchNum { get; set; }
     }
 }
 
