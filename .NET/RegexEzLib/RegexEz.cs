@@ -205,7 +205,7 @@ public class RegexEz
         }
         else if (!_fieldTests[testString].ContainsKey(matchNum))
         {
-                _fieldTests[testString].Add(matchNum, new List<FieldTest> { new(fieldName, expectedValue) });
+             _fieldTests[testString].Add(matchNum, new List<FieldTest> { new(fieldName, expectedValue) });
         }
         else
         {
@@ -323,6 +323,11 @@ public class RegexEz
 
     private string Build(string name, HashSet<string>? alreadyUsed = null)
     {
+        if (! _macros.ContainsKey(name))
+        {
+            throw new ArgumentException($"Macro {name} not defined");
+        }
+
         if (alreadyUsed == null)
         {
             alreadyUsed = new HashSet<string> { name };
@@ -339,7 +344,7 @@ public class RegexEz
             {
                 if (alreadyUsed.Contains(node.Macro))
                 {
-                    throw new ArgumentException($"Circular reference detected for {node.Macro}");
+                    throw new ArgumentException($"Circular reference detected for \"{node.Macro}\"");
                 }
 
                 var str = Build(node.Macro, alreadyUsed);
@@ -362,8 +367,8 @@ public class RegexEz
     {
         Text,
         MacroStart,
-        MacroWalk,
-        MacroBracketWalk
+        ScanningMacroName,
+        ScanningMacroNameExpectingBracketAtEnd
     };
     private List<ListNode> Parse(string regex)
     {
@@ -396,12 +401,12 @@ public class RegexEz
                     builder.Clear();
                     if (c == '(')
                     {
-                        state = Mode.MacroBracketWalk;
+                        state = Mode.ScanningMacroNameExpectingBracketAtEnd;
                     }
                     else if (char.IsLetter(c))
                     {
                         builder.Append(c);
-                        state = Mode.MacroWalk;
+                        state = Mode.ScanningMacroName;
                     }
                     else
                     {
@@ -409,10 +414,16 @@ public class RegexEz
                     }
 
                     break;
-                case Mode.MacroWalk:
+                case Mode.ScanningMacroName:
                     if (char.IsLetter(c))
                     {
                         builder.Append(c);
+                    }
+                    else if (c == '$')
+                    {
+                        nodes.Add(new ListNode { Macro = builder.ToString() });
+                        builder.Clear();
+                        state = Mode.MacroStart;
                     }
                     else
                     {
@@ -427,7 +438,7 @@ public class RegexEz
                     }
 
                     break;
-                case Mode.MacroBracketWalk:
+                case Mode.ScanningMacroNameExpectingBracketAtEnd:
                     if (c == ')')
                     {
                         if (builder.Length == 0)
@@ -447,13 +458,19 @@ public class RegexEz
             }
         }
 
-        if (state is Mode.MacroWalk or Mode.MacroBracketWalk)
+        if (state is Mode.ScanningMacroName or Mode.ScanningMacroNameExpectingBracketAtEnd)
         {
             if (builder.Length == 0)
             {
                 throw new ArgumentException($"Empty macro name after {soFar}");
             }
             nodes.Add(new ListNode { Macro = builder.ToString() });
+        }
+        else if (state == Mode.MacroStart)
+        {
+            // Here we saw a $ thinking it is a macro start but really it is a $ at the end of the string
+            builder.Append('$');
+            nodes.Add(new ListNode { Text = builder.ToString() });
         }
         else
         {
