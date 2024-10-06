@@ -2,7 +2,7 @@
 Modern software practices have embraced certain key ideas such as the primacy of clarity and simplicity in code, the idea of breaking down complexity into its component parts, the recognition that code is read more than it is written and the key importance of unit testing.
 However, one common aspect of programming that pervades all languages and frameworks is the regular expression -- a notorious exception to this modern practice.
 Regular expressions are extremely difficult to read and understand and are in a sense "write only". Even the authors of the code can have a very under time understanding them.
-They are writien in an archain language designed for conciseness rather than understandability so that really understanding what they do is very challenging.
+They are writien in an archaic language designed for conciseness rather than understandability so that really understanding what they do is very challenging.
 This is further compounded by the extreme difficulty of using capture groups to extract parts of the matched text.
 
 RegexEz is a library that is designed to introduce the ideas of modern software design into this very useful technique, even though its syntax and usage is a relic of the very early days of computer programming.
