@@ -1,2 +1,2 @@
-# RegexEz
+ RegexEz
 Modernizing Regular Expressions

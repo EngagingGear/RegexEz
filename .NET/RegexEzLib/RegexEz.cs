@@ -12,14 +12,15 @@ public class RegexEz
     private const string TestMatchMulti = "$multimatch";
     private const string TestNoMatch = "$nomatch";
     private const string TestEnd = "$end";
-    private const string TestFieldPrefix = "$field.";
+    private const string SimpleFieldTestPrefix = "$field.";
+    private const string MultiFieldTestPrefix = "$field[";
     private const string TagPrefix = "__tag_";
 
     private readonly Dictionary<string, List<ListNode>> _macros = new();
     private readonly List<string> _passTests = new();
     private readonly List<string> _failTests = new();
     private readonly Dictionary<string, List<string>> _multiMatches = new();
-    private readonly Dictionary<string, List<FieldTest>> _fieldTests = new();
+    private readonly Dictionary<string, Dictionary<int, List<FieldTest>>> _fieldTests = new();
     private readonly bool _withGroups;
     private Regex? _regex = null;
 
@@ -61,35 +62,15 @@ public class RegexEz
         return Regex().IsMatch(test);
     }
 
-    public Match Match(string test)
+    public MatchEz Match(string test)
     {
-        return Regex().Match(test);
+        return new MatchEz(Regex().Match(test));
     }
 
-    public MatchCollection Matches(string test)
+    public IList<MatchEz> Matches(string test)
     {
-        return Regex().Matches(test);
+        return Regex().Matches(test).Select(m => new MatchEz(m)).ToList();
     }
-
-    public string GetField(string test, string fieldName)
-    {
-        var groups = Regex().Match(test).Groups;
-        var groupName = $"{TagPrefix}{fieldName}";
-        return groups.ContainsKey(groupName) ? groups[groupName].Value : string.Empty;
-    }
-
-    public string? GetFieldMultiMatch(string test, string fieldName, int matchNum)
-    {
-        var matches = Regex().Matches(test);
-        if (matches.Count <= matchNum)
-        {
-            return null;
-        }
-        var groups = matches[matchNum].Groups;
-        var groupName = $"{TagPrefix}{fieldName}";
-        return groups.ContainsKey(groupName) ? groups[groupName].Value : string.Empty;
-    }
-
 
     public bool Test(List<string>? optionalFailures = null)
     {
@@ -104,6 +85,11 @@ public class RegexEz
     public bool Test(RegexOptions options, TimeSpan timeout, List<string>? optionalFailures = null)
     {
         return PerformTest(Regex(options, timeout), optionalFailures);
+    }
+
+    public static string TagName(string fieldName)
+    {
+        return $"{TagPrefix}{fieldName}";
     }
 
     private bool PerformTest(Regex regex, List<string>? optionalFailures = null)
@@ -130,50 +116,62 @@ public class RegexEz
         if (_fieldTests.Any() && _withGroups == false)
         {
             allPass = false;
-            optionalFailures?.Add("Field tests require groups to be enabled. This is a RegexExGui constructor parameter");
+            optionalFailures?.Add("Field tests require groups to be enabled. This is a RegexEz constructor parameter");
         }
         else
         {
             foreach (var (testStr, list) in _fieldTests)
             {
-                var groups = regex.Match(testStr).Groups;
-                foreach (var (fieldName, expected) in list)
+                var allMatches = regex.Matches(testStr);
+                foreach (var (matchNum, matchList) in list)
                 {
-                    var groupName = $"{TagPrefix}{fieldName}";
-                    if (groups.ContainsKey(groupName))
-                    {
-                        if (groups[groupName].Value != expected)
-                        {
-                            allPass = false;
-                            optionalFailures?.Add(
-                                $"Expected {expected} for field {fieldName} but got {groups[groupName].Value}");
-                        }
-                    }
-                    else
+                    if (allMatches.Count <= matchNum)
                     {
                         allPass = false;
-                        optionalFailures?.Add($"Unknown field {fieldName}");
+                        optionalFailures?.Add($"For {testStr} expected {matchNum} matches but only got {allMatches.Count}");
+                        continue;
+                    }
+                    var groups = allMatches[matchNum].Groups;
+                    foreach (var expectedMatch in matchList)
+                    {
+                        var fieldName = expectedMatch.FieldName;
+                        var expected = expectedMatch.ExpectedValue;
+                        var groupName = TagName(fieldName);
+                        if (groups.ContainsKey(groupName))
+                        {
+                            if (groups[groupName].Value != expected)
+                            {
+                                allPass = false;
+                                optionalFailures?.Add($"For {testStr} expected {expected} for field {fieldName} in match num {matchNum} but got {groups[groupName].Value}");
+                            }
+                        }
+                        else
+                        {
+                            allPass = false;
+                            optionalFailures?.Add($"For {testStr} unknown macro {fieldName}");
+                        }
                     }
                 }
             }
         }
 
-        foreach (var (testStr, matches) in _multiMatches)
+        foreach (var (testStr, expectedMatches) in _multiMatches)
         {
             var match = regex.Matches(testStr);
-            if (match.Count != matches.Count)
+            if (match.Count != expectedMatches.Count)
             {
                 allPass = false;
-                optionalFailures?.Add($"Expected {matches.Count} matches but got {match.Count}");
+                optionalFailures?.Add($"For {testStr} expected {expectedMatches.Count} matches but got {match.Count}. " +
+                                      $"Actual matches {string.Join(", ", match.Select(m => m.Value))}");
             }
             else
             {
                 for (var i = 0; i < match.Count; i++)
                 {
-                    if (match[i].Value != matches[i])
+                    if (match[i].Value != expectedMatches[i])
                     {
                         allPass = false;
-                        optionalFailures?.Add($"Expected {matches[i]} but got {match[i].Value}");
+                        optionalFailures?.Add($"For {testStr} expected {expectedMatches[i]} but got {match[i].Value}");
                     }
                 }
             }
@@ -198,12 +196,21 @@ public class RegexEz
             _multiMatches[testString].AddRange(matches);
     }
 
-    private void AddFieldTest(string testString, string fieldName, string expectedValue)
+    private void AddFieldTest(string testString, string fieldName, string expectedValue, int matchNum)
     {
         if (!_fieldTests.ContainsKey(testString))
-            _fieldTests.Add(testString, new List<FieldTest> { new(fieldName, expectedValue) });
+        {
+            _fieldTests.Add(testString, new Dictionary<int, List<FieldTest>>());
+            _fieldTests[testString].Add(0, new List<FieldTest> { new(fieldName, expectedValue) });
+        }
+        else if (!_fieldTests[testString].ContainsKey(matchNum))
+        {
+                _fieldTests[testString].Add(matchNum, new List<FieldTest> { new(fieldName, expectedValue) });
+        }
         else
-            _fieldTests[testString].Add(new FieldTest(fieldName, expectedValue));
+        {
+            _fieldTests[testString][matchNum].Add(new FieldTest(fieldName, expectedValue));
+        }
     }
 
     private void Initialize(string[] pattern)
@@ -258,9 +265,9 @@ public class RegexEz
                     throw new ArgumentException($"Invalid test line {lineNum}, missing {TestEnd}");
                 AddMultiMatch(regex, list);
             }
-            else if (name.StartsWith(TestFieldPrefix))
+            else if (name.StartsWith(SimpleFieldTestPrefix))
             {
-                var fieldName = name.Substring(TestFieldPrefix.Length);
+                var fieldName = name.Substring(SimpleFieldTestPrefix.Length);
                 if (string.IsNullOrWhiteSpace(fieldName))
                 {
                     throw new ArgumentException($"Invalid field test {line}, expected field name after .");
@@ -272,7 +279,33 @@ public class RegexEz
                     throw new ArgumentException($"Invalid field test {line}, expected $=");
                 }
 
-                AddFieldTest(split[0].Trim(), fieldName, split[1].Trim());
+                AddFieldTest(split[0].Trim(), fieldName, split[1].Trim(), 0);
+            }
+            else if (name.StartsWith(MultiFieldTestPrefix))
+            {
+                int closeBracketIdx = name.IndexOf(']');
+                if (closeBracketIdx+1 >= name.Length - 1 || name[closeBracketIdx+1] != '.')
+                {
+                    closeBracketIdx = -1;
+                }
+                if (closeBracketIdx < 0 || !int.TryParse(name.Substring(MultiFieldTestPrefix.Length), out var matchNumber))
+                {
+                    throw new ArgumentException($"Invalid field test {line}, invalid index or field name");
+                }
+
+                var fieldName = name.Substring(closeBracketIdx+2);
+                if (string.IsNullOrWhiteSpace(fieldName))
+                {
+                    throw new ArgumentException($"Invalid field test {line}, expected field name after .");
+                }
+                var split = regex.Split("$=");
+
+                if (split.Length != 2 || string.IsNullOrWhiteSpace(fieldName))
+                {
+                    throw new ArgumentException($"Invalid field test {line}, expected $=");
+                }
+
+                AddFieldTest(split[0].Trim(), fieldName, split[1].Trim(), matchNumber);
             }
             else if (name.StartsWith("$"))
             {
@@ -312,7 +345,7 @@ public class RegexEz
                 var str = Build(node.Macro, alreadyUsed);
                 if (_withGroups)
                 {
-                    str = $"(?<{TagPrefix}{node.Macro}>{str})";
+                    str = $"(?<{TagName(node.Macro)}>{str})";
                 }
                 sb.Append(str);
             }

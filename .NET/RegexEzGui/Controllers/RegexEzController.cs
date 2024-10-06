@@ -47,8 +47,7 @@ namespace RegexExGui.Controllers
             try
             {
                 var regexEz = new RegexEz(request.Pattern, true);
-                string fieldValue = regexEz.GetField(request.InputString, request.Field);
-
+                string fieldValue = regexEz.Match(request.InputString)[request.Field];
                 return Ok(new { FieldValue = fieldValue });
             }
             catch (Exception ex)
@@ -63,11 +62,13 @@ namespace RegexExGui.Controllers
             try
             {
                 var regexEz = new RegexEz(request.Pattern, true);
-
-
-                var fieldValue = regexEz.GetFieldMultiMatch(request.InputString, request.Field, request.MatchNum ?? -1);
-
-                return Ok(new { FieldValue = fieldValue });
+                var matches = regexEz.Matches(request.InputString);
+                if (request.MatchNum != null && request.MatchNum.Value < matches.Count)
+                {
+                    var fieldValue = matches[request.MatchNum.Value][request.Field];
+                    return Ok(new { FieldValue = fieldValue });
+                }
+                return Ok(new { errorMessage = "MatchNumber out of range" });
             }
             catch (Exception ex)
             {
