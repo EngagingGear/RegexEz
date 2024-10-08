@@ -5,7 +5,7 @@ namespace RegexEzLib;
 
 public class RegexEz
 {
-    private record FieldTest(string FieldName, string ExpectedValue);
+    public record FieldTest(string FieldName, string ExpectedValue);
     private record ListNode(string? Macro = null, string? Text = null);
 
     private const string TestMatch = "$match";
@@ -72,19 +72,19 @@ public class RegexEz
         return Regex().Matches(test).Select(m => new MatchEz(m)).ToList();
     }
 
-    public bool Test(List<string>? optionalFailures = null)
+    public bool Test(List<string>? failures = null)
     {
-        return PerformTest(Regex(), optionalFailures);
+        return PerformTest(Regex(), failures);
     }
 
-    public bool Test(RegexOptions options, List<string>? optionalFailures = null)
+    public bool Test(RegexOptions options, List<string>? failures = null)
     {
-        return PerformTest(Regex(options), optionalFailures);
+        return PerformTest(Regex(options), failures);
     }
 
-    public bool Test(RegexOptions options, TimeSpan timeout, List<string>? optionalFailures = null)
+    public bool Test(RegexOptions options, TimeSpan timeout, List<string>? failures = null)
     {
-        return PerformTest(Regex(options, timeout), optionalFailures);
+        return PerformTest(Regex(options, timeout), failures);
     }
 
     public static string TagName(string fieldName)
@@ -92,7 +92,7 @@ public class RegexEz
         return $"{TagPrefix}{fieldName}";
     }
 
-    private bool PerformTest(Regex regex, List<string>? optionalFailures = null)
+    private bool PerformTest(Regex regex, List<string>? failures = null)
     {
         var allPass = true;
         foreach (var test in _passTests)
@@ -100,7 +100,7 @@ public class RegexEz
             if (!regex.IsMatch(test))
             {
                 allPass = false;
-                optionalFailures?.Add($"Expected pass: {test}");
+                failures?.Add($"Expected pass: {test}");
             }
         }
 
@@ -109,14 +109,14 @@ public class RegexEz
             if (regex.IsMatch(test))
             {
                 allPass = false;
-                optionalFailures?.Add($"Expected fail: {test}");
+                failures?.Add($"Expected fail: {test}");
             }
         }
 
         if (_fieldTests.Any() && _withGroups == false)
         {
             allPass = false;
-            optionalFailures?.Add("Field tests require groups to be enabled. This is a RegexEz constructor parameter");
+            failures?.Add("Field tests require groups to be enabled. This is a RegexEz constructor parameter");
         }
         else
         {
@@ -128,7 +128,7 @@ public class RegexEz
                     if (allMatches.Count <= matchNum)
                     {
                         allPass = false;
-                        optionalFailures?.Add($"For {testStr} expected {matchNum} matches but only got {allMatches.Count}");
+                        failures?.Add($"For {testStr} expected {matchNum} matches but only got {allMatches.Count}");
                         continue;
                     }
                     var groups = allMatches[matchNum].Groups;
@@ -142,13 +142,13 @@ public class RegexEz
                             if (groups[groupName].Value != expected)
                             {
                                 allPass = false;
-                                optionalFailures?.Add($"For {testStr} expected {expected} for field {fieldName} in match num {matchNum} but got {groups[groupName].Value}");
+                                failures?.Add($"For {testStr} expected {expected} for field {fieldName} in match num {matchNum} but got {groups[groupName].Value}");
                             }
                         }
                         else
                         {
                             allPass = false;
-                            optionalFailures?.Add($"For {testStr} unknown macro {fieldName}");
+                            failures?.Add($"For {testStr} unknown macro {fieldName}");
                         }
                     }
                 }
@@ -161,7 +161,7 @@ public class RegexEz
             if (match.Count != expectedMatches.Count)
             {
                 allPass = false;
-                optionalFailures?.Add($"For {testStr} expected {expectedMatches.Count} matches but got {match.Count}. " +
+                failures?.Add($"For {testStr} expected {expectedMatches.Count} matches but got {match.Count}. " +
                                       $"Actual matches {string.Join(", ", match.Select(m => m.Value))}");
             }
             else
@@ -171,7 +171,7 @@ public class RegexEz
                     if (match[i].Value != expectedMatches[i])
                     {
                         allPass = false;
-                        optionalFailures?.Add($"For {testStr} expected {expectedMatches[i]} but got {match[i].Value}");
+                        failures?.Add($"For {testStr} expected {expectedMatches[i]} but got {match[i].Value}");
                     }
                 }
             }
@@ -193,7 +193,7 @@ public class RegexEz
         if (!_multiMatches.ContainsKey(testString))
             _multiMatches.Add(testString, matches);
         else
-            _multiMatches[testString].AddRange(matches);
+            throw new ArgumentException($"Duplicate multimatch test {testString}");
     }
 
     private void AddFieldTest(string testString, string fieldName, string expectedValue, int matchNum)
@@ -201,7 +201,7 @@ public class RegexEz
         if (!_fieldTests.ContainsKey(testString))
         {
             _fieldTests.Add(testString, new Dictionary<int, List<FieldTest>>());
-            _fieldTests[testString].Add(0, new List<FieldTest> { new(fieldName, expectedValue) });
+            _fieldTests[testString].Add(matchNum, new List<FieldTest> { new(fieldName, expectedValue) });
         }
         else if (!_fieldTests[testString].ContainsKey(matchNum))
         {
@@ -288,7 +288,8 @@ public class RegexEz
                 {
                     closeBracketIdx = -1;
                 }
-                if (closeBracketIdx < 0 || !int.TryParse(name.Substring(MultiFieldTestPrefix.Length), out var matchNumber))
+
+                if (closeBracketIdx < 0 || !int.TryParse(name.Substring(MultiFieldTestPrefix.Length, closeBracketIdx - MultiFieldTestPrefix.Length), out var matchNumber))
                 {
                     throw new ArgumentException($"Invalid field test {line}, invalid index or field name");
                 }
@@ -408,6 +409,10 @@ public class RegexEz
                         builder.Append(c);
                         state = Mode.ScanningMacroName;
                     }
+                    // if (c == '=')
+                    // {
+                    //     state = Mode.Text;
+                    // }
                     else
                     {
                         throw new ArgumentException($"Invalid pattern after {soFar}");

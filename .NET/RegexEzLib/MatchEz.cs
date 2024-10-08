@@ -9,8 +9,19 @@ namespace RegexEzLib
             _match = match;
         }
         public Match Match => _match;
-        public string this[string fieldName] => _match.Groups[RegexEz.TagName(fieldName)].Value;
+        public string this[string fieldName]
+        {
+            get
+            {
+                var tag = RegexEz.TagName(fieldName);
+                if (!_match.Groups.ContainsKey(tag))
+                    throw new KeyNotFoundException($"Field {fieldName} does not exist");
+                return _match.Groups[tag].Value;
+            }
+        }
+
         public string Value => _match.Value;
+        public bool Success => _match.Success;
         private readonly Match _match;
     }
 }
