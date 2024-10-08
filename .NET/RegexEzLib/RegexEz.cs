@@ -3,6 +3,9 @@ using System.Text.RegularExpressions;
 
 namespace RegexEzLib;
 
+/// <summary>
+/// A class for creating a RegexEz object from a pattern string. This object can then be used to test strings against the pattern.
+/// </summary>
 public class RegexEz
 {
     public record FieldTest(string FieldName, string ExpectedValue);
@@ -24,74 +27,148 @@ public class RegexEz
     private readonly bool _withGroups;
     private Regex? _regex = null;
 
+    /// <summary>
+    /// Construct a RegexEz object
+    /// </summary>
+    /// <param name="pattern">Pattern as a string</param>
+    /// <param name="withGroups">Include capture groups in regex</param>
+    /// <param name="breakString">break string for breaking into multiple lines</param>
     public RegexEz(string pattern, bool withGroups = false, string breakString = "\r\n")
     {
         _withGroups = withGroups;
         Initialize(pattern.Split(breakString));
     }
 
+    /// <summary>
+    /// Construct a RegexEz object
+    /// </summary>
+    /// <param name="pattern">Pattern as a string array</param>
+    /// <param name="withGroups">Include capture groups in regex</param>
     public RegexEz(string[] pattern, bool withGroups = false)
     {
         _withGroups = withGroups;
         Initialize(pattern);
     }
 
+    /// <summary>
+    /// Return a regular expression for this regexEz pattern
+    /// </summary>
+    /// <returns></returns>
     public Regex Regex()
     {
         _regex ??= new Regex(RegexStr());
         return _regex;
     }
 
+    /// <summary>
+    /// Return a regular expression for this regexEz pattern
+    /// </summary>
+    /// <param name="options"></param>
+    /// <returns></returns>
     public Regex Regex(RegexOptions options)
     {
         return new Regex(RegexStr(), options);
     }
 
+    /// <summary>
+    /// Return a regular expression for this regexEz pattern
+    /// </summary>
+    /// <param name="options"></param>
+    /// <param name="timeout"></param>
+    /// <returns></returns>
     public Regex Regex(RegexOptions options, TimeSpan timeout)
     {
         return new Regex(RegexStr(), options, timeout);
     }
 
+    /// <summary>
+    /// Return a regular expression string for this regexEz pattern
+    /// </summary>
+    /// <returns></returns>
     public string RegexStr()
     {
         return Build(_macros.First().Key);
     }
 
+    /// <summary>
+    /// True if the test string matches the regexEz pattern
+    /// </summary>
+    /// <param name="test"></param>
+    /// <returns></returns>
     public bool IsMatch(string test)
     {
         return Regex().IsMatch(test);
     }
 
+    /// <summary>
+    /// Return match details of the regexEz pattern
+    /// </summary>
+    /// <param name="test">String to test</param>
+    /// <returns>A MatchEz object describing the match</returns>
     public MatchEz Match(string test)
     {
         return new MatchEz(Regex().Match(test));
     }
 
+    /// <summary>
+    /// Return a set of multiple matches of the regexEz pattern
+    /// </summary>
+    /// <param name="test">String to test</param>
+    /// <returns>List of MatchEz objects with details of each match</returns>
     public IList<MatchEz> Matches(string test)
     {
         return Regex().Matches(test).Select(m => new MatchEz(m)).ToList();
     }
 
+    /// <summary>
+    /// Run all unit tests
+    /// </summary>
+    /// <param name="failures">Optional list of strings detailing the test failures</param>
+    /// <returns>True if all passed, false if any failed</returns>
     public bool Test(List<string>? failures = null)
     {
         return PerformTest(Regex(), failures);
     }
 
+    /// <summary>
+    /// Run all unit tests
+    /// </summary>
+    /// <param name="options">Options to use in the regex for testing</param>
+    /// <param name="failures">Optional list of strings detailing the test failures</param>
+    /// <returns>True if all passed, false if any failed</returns>
     public bool Test(RegexOptions options, List<string>? failures = null)
     {
         return PerformTest(Regex(options), failures);
     }
 
+    /// <summary>
+    /// Run all unit tests
+    /// </summary>
+    /// <param name="timeout">Timeout to use with the regex match</param>
+    /// <param name="failures">Optional list of strings detailing the test failures</param>
+    /// <param name="options">Options to use in the regex for testing</param>
+    /// <returns>True if all passed, false if any failed</returns>
     public bool Test(RegexOptions options, TimeSpan timeout, List<string>? failures = null)
     {
         return PerformTest(Regex(options, timeout), failures);
     }
 
+    /// <summary>
+    /// Function to return the encoded capture group tag name for a field
+    /// </summary>
+    /// <param name="fieldName"></param>
+    /// <returns></returns>
     public static string TagName(string fieldName)
     {
         return $"{TagPrefix}{fieldName}";
     }
 
+    /// <summary>
+    /// Common function to perform unit tests
+    /// </summary>
+    /// <param name="regex"></param>
+    /// <param name="failures"></param>
+    /// <returns></returns>
     private bool PerformTest(Regex regex, List<string>? failures = null)
     {
         var allPass = true;
@@ -180,6 +257,11 @@ public class RegexEz
         return allPass;
     }
 
+    /// <summary>
+    /// Add a test to the simple test list
+    /// </summary>
+    /// <param name="testString"></param>
+    /// <param name="expectedPass"></param>
     private void AddTest(string testString, bool expectedPass)
     {
         if (expectedPass)
@@ -188,6 +270,12 @@ public class RegexEz
             _failTests.Add(testString);
     }
 
+    /// <summary>
+    /// Add a multimatch test to the test list
+    /// </summary>
+    /// <param name="testString"></param>
+    /// <param name="matches"></param>
+    /// <exception cref="ArgumentException">Thrown if we try to add the same multimatch test more than once.</exception>
     private void AddMultiMatch(string testString, List<string> matches)
     {
         if (!_multiMatches.ContainsKey(testString))
@@ -196,6 +284,13 @@ public class RegexEz
             throw new ArgumentException($"Duplicate multimatch test {testString}");
     }
 
+    /// <summary>
+    /// Add a field test to the field test list
+    /// </summary>
+    /// <param name="testString"></param>
+    /// <param name="fieldName"></param>
+    /// <param name="expectedValue"></param>
+    /// <param name="matchNum"></param>
     private void AddFieldTest(string testString, string fieldName, string expectedValue, int matchNum)
     {
         if (!_fieldTests.ContainsKey(testString))
@@ -213,6 +308,12 @@ public class RegexEz
         }
     }
 
+    /// <summary>
+    /// Initialize a RegexEz object from a pattern. This reads the pattern and creates macros and unit tests
+    /// in the internal state objects of the class. Macro lines are then parsed into a set of tokens by the Parse function.
+    /// </summary>
+    /// <param name="pattern"></param>
+    /// <exception cref="ArgumentException">Thrown for various bad syntax.</exception>
     private void Initialize(string[] pattern)
     {
         _macros.Clear();
@@ -322,6 +423,14 @@ public class RegexEz
         Build(_macros.First().Key);
     }
 
+    /// <summary>
+    /// Takes a macro and the parsed token list and builds a regular expression string corresponding to it.
+    /// Note this is a recursive function to insert the macros in the correct place.
+    /// </summary>
+    /// <param name="name">Name of macro to create</param>
+    /// <param name="alreadyUsed">Hashset of macros already used in this depth first search to catch circular references</param>
+    /// <returns>The regex string</returns>
+    /// <exception cref="ArgumentException">Thrown for various syntax errors</exception>
     private string Build(string name, HashSet<string>? alreadyUsed = null)
     {
         if (! _macros.ContainsKey(name))
@@ -364,13 +473,24 @@ public class RegexEz
         return sb.ToString();
     }
 
+    /// <summary>
+    /// These are the different parser modes
+    /// </summary>
     private enum Mode
     {
-        Text,
-        MacroStart,
-        ScanningMacroName,
-        ScanningMacroNameExpectingBracketAtEnd
+        Text, // currently scanning normal regex text
+        MacroStart, // We have just seen a $ and are looking for the start of a macro name
+        ScanningMacroName, // We are scanning a macro name
+        ScanningMacroNameExpectingBracketAtEnd // We are scanning a macro name and expecting a bracket ) at the end since we started with a bracket (.
     };
+
+    /// <summary>
+    /// A custom parser to convert a macro line into a list of tokens, each token being either
+    /// a block of text for the regex or a macro name to be substituted.
+    /// </summary>
+    /// <param name="regex"></param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentException"></exception>
     private List<ListNode> Parse(string regex)
     {
         var state = Mode.Text;
