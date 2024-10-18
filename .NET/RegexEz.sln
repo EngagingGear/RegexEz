@@ -7,7 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RegexExGui", "RegexEzGui\Re
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RegexEzLib", "RegexEzLib\RegexEzLib.csproj", "{FF7FB9C4-9223-4693-B9BC-1E4EA999648A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RegexEzLib.Tests", "RegexEzLib.Tests\RegexEzLib.Tests.csproj", "{FA8D175D-E3E3-417E-BA94-666174BA3408}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RegexEzLib.Tests", "RegexEzLib.Tests\RegexEzLib.Tests.csproj", "{FA8D175D-E3E3-417E-BA94-666174BA3408}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

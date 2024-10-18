@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Text.RegularExpressions;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using static RegexEzLib.RegexEz;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace RegexEzLib.Tests
 {
@@ -88,7 +88,7 @@ namespace RegexEzLib.Tests
             var template = "test: ^$(username)@$(domain)\\.$(tld)$\r\nusername: $name\r\n\r\ndomain: $name\r\ntld: $name\r\nname: [a-zA-Z0-9_]+";
             var regexEz = new RegexEz(template);
             var regexStr = regexEz.RegexStr();
-            Assert.AreEqual("^[a-zA-Z0-9_]+@[a-zA-Z0-9_]+\\.[a-zA-Z0-9_]+$", regexStr);
+            Assert.AreEqual("^([a-zA-Z0-9_]+)@([a-zA-Z0-9_]+)\\.([a-zA-Z0-9_]+)$", regexStr);
         }
 
         [TestMethod]
@@ -104,7 +104,7 @@ namespace RegexEzLib.Tests
             };
             var regexEz = new RegexEz(template);
             var regexStr = regexEz.RegexStr();
-            Assert.AreEqual("^[a-zA-Z0-9_]+@[a-zA-Z0-9_]+\\.[a-zA-Z0-9_]+$", regexStr);
+            Assert.AreEqual("^([a-zA-Z0-9_]+)@([a-zA-Z0-9_]+)\\.([a-zA-Z0-9_]+)$", regexStr);
         }
 
         [TestMethod]
@@ -120,7 +120,7 @@ namespace RegexEzLib.Tests
             };
             var regexEz = new RegexEz(template);
             var regexStr = regexEz.RegexStr();
-            Assert.AreEqual("^[a-zA-Z0-9_]+@[a-zA-Z0-9_]+\\.[a-zA-Z0-9_]+$", regexStr);
+            Assert.AreEqual("^([a-zA-Z0-9_]+)@([a-zA-Z0-9_]+)\\.([a-zA-Z0-9_]+)$", regexStr);
         }
 
         [TestMethod]
@@ -167,7 +167,7 @@ namespace RegexEzLib.Tests
             };
             var regexEz = new RegexEz(template);
             var regexStr = regexEz.RegexStr();
-            Assert.AreEqual("firstsecond", regexStr);
+            Assert.AreEqual("(first)(second)", regexStr);
         }
 
         [TestMethod]
@@ -181,7 +181,7 @@ namespace RegexEzLib.Tests
             };
             var regexEz = new RegexEz(template);
             var regexStr = regexEz.RegexStr();
-            Assert.AreEqual("first###second", regexStr);
+            Assert.AreEqual("(first)###(second)", regexStr);
         }
 
         [TestMethod]

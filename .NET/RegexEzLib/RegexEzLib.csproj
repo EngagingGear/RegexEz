@@ -10,9 +10,17 @@
     <PackageProjectUrl>https://github.com/EngagingGear/RegexEz</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/EngagingGear/RegexEz.git</RepositoryUrl>
+    <Authors>Fraser Orr</Authors>
+    <Company>Engaging Gear</Company>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <Version>1.0.1</Version>
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="..\..\LICENSE">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
     <None Include="..\..\README.md">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>

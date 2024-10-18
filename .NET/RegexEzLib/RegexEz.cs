@@ -462,6 +462,10 @@ public class RegexEz
                 {
                     str = $"(?<{TagName(node.Macro)}>{str})";
                 }
+                else if (!str.StartsWith("(") || !str.EndsWith(")"))
+                {
+                    str = $"({str})";
+                }
                 sb.Append(str);
             }
             else
